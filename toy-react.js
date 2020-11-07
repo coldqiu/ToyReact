@@ -13,7 +13,11 @@ export class ElementWrapper {
         value
       );
     } else {
-      this.root.setAttribute(name, value);
+      if (name === "className") {
+        this.root.setAttribute("class", value);
+      } else {
+        this.root.setAttribute(name, value);
+      }
     }
   }
   appendChild(component) {
@@ -50,21 +54,25 @@ export class Component {
     this.props[name] = value;
   }
   appendChild(component) {
-    // let range = document.createRange();
-    // range.setStart(this.root, this.root.childNodes.length);
-    // range.setEnd(this.root, this.root.childNodes.length);
-    // component[RENDER_TO_DOM](range);
     this.children.push(component);
   }
   [RENDER_TO_DOM](range) {
     this._range = range; // 缓存下来
-    // range.deleteContents();
-    // range.insertNode(this.root);
     this.render()[RENDER_TO_DOM](range); // 一个递归调用
   }
   rerender() {
-    this._range.deleteContents();
-    this[RENDER_TO_DOM](this._range);
+    // this._range.deleteContents();
+    // this[RENDER_TO_DOM](this._range);
+    // 这段关于 range 在rerender操作中的设置， 未理解；
+    // rerender 前后的range 一致！？
+    let oldRange = this._range;
+    let range = document.createRange();
+    range.setStart(this._range.startContainer, oldRange.startOffset);
+    range.setEnd(this._range.startContainer, oldRange.startOffset);
+    this[RENDER_TO_DOM](range);
+    
+    oldRange.setStart(range.endContainer, range.endOffset);
+    oldRange.deleteContents();
   }
   setState(newState) {
     if (this.state === null || typeof this.state !== "object") {
@@ -103,6 +111,9 @@ export function createElement(type, attributes, ...children) {
     for (let child of children) {
       if (typeof child === "string") {
         child = new TextWrapper(child);
+      }
+      if (child === null) {
+        continue;
       }
       if (typeof child === "object" && child instanceof Array) {
         insertChildren(child);
